@@ -78,23 +78,26 @@ Be helpful, concise, and friendly.
     // Dynamically probe available models and try each until one works. This
     // addresses the issue where certain models are not available for
     // generateContent/startChat on the configured API version.
-  // Use gemini-1.5-flash with v1beta API version for better compatibility
+  // Use gemini-pro (most stable and widely available model)
   let text = ""
     try {
-      const modelInstance = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+      const modelInstance = genAI.getGenerativeModel({ 
+        model: "gemini-2.0-flash",
+        generationConfig: {
+          temperature: 0.7,
+          topP: 0.8,
+          topK: 40,
+          maxOutputTokens: 400,
+        }
+      })
+      
       // Try chat flow first
       try {
         const chat = modelInstance.startChat({
-          history: messages.map((msg) => ({
+          history: messages.slice(0, -1).map((msg) => ({
             role: msg.role === "user" ? "user" : "model",
             parts: [{ text: msg.content }],
           })),
-          generationConfig: {
-            temperature: 0.7,
-            topP: 0.8,
-            topK: 40,
-            maxOutputTokens: 400,
-          },
         })
         const result = await chat.sendMessage(
           prompt +
@@ -106,7 +109,7 @@ Be helpful, concise, and friendly.
         text = response.text()
       } catch (chatError) {
         // If chat fails, try generateContent
-        console.warn(`Chat flow failed for gemini-1.5-flash:`, chatError)
+        console.warn(`Chat flow failed for gemini-pro:`, chatError)
         const genResult = await modelInstance.generateContent(
           prompt + "\n\nUser question: " + lastUserMessage.content + "\nAssistant: ",
         )
@@ -114,7 +117,7 @@ Be helpful, concise, and friendly.
       }
     } catch (modelError) {
       // If both fail, throw for outer handler
-      console.error("All attempts failed for gemini-1.5-flash:", modelError)
+      console.error("All attempts failed for gemini-pro:", modelError)
       throw modelError
     }
 
